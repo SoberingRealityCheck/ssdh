@@ -105,6 +105,7 @@ public class SeasonalLods implements ClientModInitializer {
 
     private void onTick(Minecraft mc) {
         if (mc.level == null) {
+            SeasonMetaTexture.INSTANCE.clear();
             lastSubSeason = null;
             armedTicks = -1;
             pending.clear();
@@ -113,6 +114,7 @@ public class SeasonalLods implements ClientModInitializer {
         }
 
         Season.SubSeason now = currentSubSeason(mc);
+        SeasonMetaTexture.INSTANCE.update(now); // shaders read the season from this
         if (now != null) {
             // First sight after joining is not a change. The join sweep covers it.
             if (lastSubSeason != null && now != lastSubSeason) {
