@@ -8,7 +8,9 @@
     "Elysium pack"
   ],
   "contact": {
-    "sources": "https://github.com/ItsThatNova/serene-seasons-x-distant-horizons"
+    "homepage": "https://github.com/SoberingRealityCheck/ssdh",
+    "sources": "https://github.com/SoberingRealityCheck/ssdh",
+    "issues": "https://github.com/SoberingRealityCheck/ssdh/issues"
   },
   "license": "MIT",
   "environment": "client",
