@@ -32,6 +32,28 @@ recolor is a quiet sweep. No flash, no ring.
 
 `/ssdh reload` runs the sweep by hand. Watch the log for `Sweep started`.
 
+## Fake snow on far LODs
+
+Serene Seasons adds and melts snow as real blocks, but only in loaded
+chunks. A chunk nobody has visited since winter still shows autumn on the
+LODs. So the mod paints the season onto the LODs.
+
+For each column DH draws, it asks Serene Seasons if that spot is cold
+enough to snow right now. Cold: the color goes toward white. Not cold: a
+snow layer gets the biome's grass color back. The world is not changed.
+Only how the LOD looks.
+
+`/ssdh snow off` and `/ssdh snow on` turn it off and on. Not saved. It's on
+at launch.
+
+It's a fake, and it's rough:
+
+- DH colors per block, not per face. Cliff sides go white with the tops.
+- It can't see under a snow layer. Melted snow becomes grass colored, even
+  over stone or sand.
+- It can't see roofs. Anything DH draws gets snow.
+- It doesn't fix the in-world snow, or maps like Xaero's.
+
 ## Status
 
 It compiles. It has never been run in a real client. Things to check

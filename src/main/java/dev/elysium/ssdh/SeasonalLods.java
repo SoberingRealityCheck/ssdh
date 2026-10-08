@@ -17,6 +17,7 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -91,16 +92,30 @@ public class SeasonalLods implements ClientModInitializer {
             }
         });
 
-        // Manual trigger, for watching it work: /ssdh reload
+        SeasonalSnow.register();
+
+        // For watching it work:
+        //   /ssdh reload        run the sweep now
+        //   /ssdh snow on|off   fake LOD snow, then re-sweep so it shows
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("ssdh")
                         .then(ClientCommands.literal("reload").executes(ctx -> {
                             int n = startSweep();
                             ctx.getSource().sendFeedback(Component.literal("Seasonal LODs: queued " + n + " sections"));
                             return Command.SINGLE_SUCCESS;
-                        }))));
+                        }))
+                        .then(ClientCommands.literal("snow")
+                                .then(ClientCommands.literal("on").executes(ctx -> setSnow(ctx.getSource(), true)))
+                                .then(ClientCommands.literal("off").executes(ctx -> setSnow(ctx.getSource(), false))))));
 
         LOG.info("Seasonal LODs loaded.");
+    }
+
+    private int setSnow(FabricClientCommandSource source, boolean on) {
+        SeasonalSnow.enabled = on;
+        int n = startSweep();
+        source.sendFeedback(Component.literal("Seasonal LODs: snow " + (on ? "on" : "off") + ", queued " + n + " sections"));
+        return Command.SINGLE_SUCCESS;
     }
 
     private void onTick(Minecraft mc) {
