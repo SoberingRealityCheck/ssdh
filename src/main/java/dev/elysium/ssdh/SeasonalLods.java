@@ -59,6 +59,14 @@ public class SeasonalLods implements ClientModInitializer {
     static final int SEASON_DELAY_TICKS = 10;
     static final int JOIN_DELAY_TICKS = 60;
 
+    // The first sweep leaves some sections on old colors. Seen in testing: far grass
+    // stays on the previous season until a second sweep. Guess at why: DH finishes a
+    // rebuild it had already started with the old colors and drops our request.
+    // So after the queue drains we wait, clear again, and sweep once more.
+    // The wait is a guess. Tune by watching.
+    static final int SWEEPS_PER_CHANGE = 2;
+    static final int SETTLE_DELAY_TICKS = 400; // 20 seconds
+
     // Sections we hand to DH per tick. DH rebuilds on its own threads, this
     // just stops us queuing thousands at once. Guess. Tune by watching.
     //
@@ -76,6 +84,10 @@ public class SeasonalLods implements ClientModInitializer {
 
     // Set from DH's event thread, read on the client tick. -1 means nothing armed.
     private volatile int armedTicks = -1;
+
+    // Sweeps still owed for the latest change, and the wait before the next one.
+    private int sweepsLeft = 0;
+    private int settleTicks = -1;
 
     @Override
     public void onInitializeClient() {
@@ -108,6 +120,8 @@ public class SeasonalLods implements ClientModInitializer {
             SeasonMetaTexture.INSTANCE.clear();
             lastSubSeason = null;
             armedTicks = -1;
+            sweepsLeft = 0;
+            settleTicks = -1;
             pending.clear();
             target = null;
             return;
@@ -127,7 +141,10 @@ public class SeasonalLods implements ClientModInitializer {
         int armed = armedTicks;
         if (armed >= 0) {
             armedTicks = armed - 1;
-            if (armed == 0) startSweep();
+            if (armed == 0) {
+                settleTicks = -1;
+                sweepsLeft = startSweep() > 0 ? SWEEPS_PER_CHANGE - 1 : 0;
+            }
         }
 
         // A DH update can rename the internals we touch. Log it and stop
@@ -137,6 +154,20 @@ public class SeasonalLods implements ClientModInitializer {
         } catch (LinkageError | Exception e) {
             LOG.error("Sweep failed. Giving up until the next season change.", e);
             pending.clear();
+            sweepsLeft = 0;
+        }
+
+        // Queue drained and another sweep is owed: wait, then clear and sweep again.
+        // A new season change (armedTicks >= 0) restarts everything, so skip then.
+        if (sweepsLeft > 0 && pending.isEmpty() && armedTicks < 0) {
+            if (settleTicks < 0) {
+                settleTicks = SETTLE_DELAY_TICKS;
+            } else if (--settleTicks == 0) {
+                settleTicks = -1;
+                sweepsLeft--;
+                LOG.info("Settle sweep, {} left after this one.", sweepsLeft);
+                startSweep();
+            }
         }
     }
 
